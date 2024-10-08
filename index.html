@@ -1,0 +1,51 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map with Restricted Region</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        #map {
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<!-- Include Leaflet JS library -->
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+<script>
+    // Initialize the map and set its view to the center of the restricted area
+    const map = L.map('map').setView([28.630150, 77.372500], 18); // Centered between the given coordinates
+
+    // Add OpenStreetMap tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Define the bounds of the restricted region using the coordinates you provided
+    const bounds = [
+        [28.628993, 77.374167],  // Southwest corner: 28°37'44.4"N 77°22'27.0"E
+        [28.631306, 77.370833]   // Northeast corner: 28°37'52.7"N 77°22'15.0"E
+    ];
+
+    // Set the maximum bounds to restrict the map to this region
+    map.setMaxBounds(bounds);
+
+    // Optionally, fit the map to show the entire bounded region at the start
+    map.fitBounds(bounds);
+
+    // Add a marker at the center for reference
+    L.marker([28.630150, 77.372500]).addTo(map)
+        .bindPopup('Center of the restricted area')
+        .openPopup();
+</script>
+
+</body>
+</html>

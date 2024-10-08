@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Zoomable Map with Correct Bounded Panning</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; /* Ensure no scrollbars */
+        }
+        svg {
+            width: 100vw;
+            height: 100vh;
+            background-color: lightblue;
+        }
+        .pin {
+            fill: red;
+            stroke: black;
+            stroke-width: 1.5px;
+        }
+        /* Position the zoom control buttons */
+        .zoom-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 10; /* Ensure buttons are above the SVG */
+            display: flex;
+            flex-direction: column;
+        }
+        .zoom-controls button {
+            margin: 5px 0;
+            padding: 15px;
+            font-size: 24px; /* Increased for touch devices */
+            cursor: pointer;
+            border: none;
+            background-color: #333;
+            color: white;
+            border-radius: 5px;
+            opacity: 0.8; /* Slight transparency */
+            transition: opacity 0.3s; /* Smooth transition on hover */
+        }
+        .zoom-controls button:hover {
+            opacity: 1; /* Fully visible on hover */
+        }
+        .zoom-controls i {
+            pointer-events: none; /* Ensure icons are clickable */
+        }
+    </style>
+</head>
+<body>
+
+<div class="zoom-controls">
+    <button id="zoom-in"><i class="fas fa-search-plus"></i></button>
+    <button id="zoom-out"><i class="fas fa-search-minus"></i></button>
+    <button id="reset"><i class="fas fa-expand"></i></button>
+</div>
+
+<script>
+    // Create the SVG container for the map
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    const svg = d3.select("body")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    const g = svg.append("g"); // Create a group for zooming
+
+    // Set up a simple geographic projection and path generator
+    const projection = d3.geoNaturalEarth1();
+    const path = d3.geoPath().projection(projection);
+
+    // Define zoom variable outside the .then() so buttons can access it
+    let zoom;
+
+    // Function to handle placing a pin on the map
+    function placePinAtCoordinates(x, y) {
+        const transform = d3.zoomTransform(svg.node());
+        const [x0, y0] = transform.invert([x, y]);
+
+        const coordinates = projection.invert([x0, y0]);
+
+        g.append("circle")
+            .attr("cx", x0)
+            .attr("cy", y0)
+            .attr("r", 5)
+            .attr("class", "pin");
+    }
+
+    // Load GeoJSON data for the world map
+    d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson")
+        .then(geoData => {
+            // Compute the bounds of the GeoJSON data
+            const [[x0, y0], [x1, y1]] = d3.geoPath().projection(projection.fitSize([width, height], geoData)).bounds(geoData);
+
+            // Update the projection to fit the map within the viewport
+            projection.fitSize([width, height], geoData);
+
+            // Draw the map
+            g.selectAll("path")
+                .data(geoData.features)
+                .enter()
+                .append("path")
+                .attr("d", path)
+                .attr("fill", "lightgreen")
+                .attr("stroke", "black");
+
+            // Define the zoom behavior with appropriate scale extent and translate extent
+            zoom = d3.zoom()
+                .scaleExtent([1, 8])
+                .translateExtent([[0, 0], [width, height]])
+                .on("zoom", (event) => {
+                    g.attr("transform", event.transform);
+                });
+
+            // Attach zoom behavior to the SVG element
+            svg.call(zoom);
+
+            // Add click and touch events
+            svg.on("click", function(event) {
+                if (!event.defaultPrevented) {
+                    const [x, y] = d3.pointer(event, svg.node());
+                    placePinAtCoordinates(x, y);
+                }
+            });
+
+            svg.on("touchstart", function(event) {
+                event.preventDefault();
+                const touches = d3.pointers(event, svg.node());
+                touches.forEach(function(touch) {
+                    const [x, y] = touch;
+                    placePinAtCoordinates(x, y);
+                });
+            });
+        });
+
+    // Add button functionality
+    const zoomInButton = document.getElementById('zoom-in');
+    const zoomOutButton = document.getElementById('zoom-out');
+    const resetButton = document.getElementById('reset');
+
+    zoomInButton.addEventListener('click', () => {
+        svg.transition().call(zoom.scaleBy, 1.5);
+    });
+
+    zoomOutButton.addEventListener('click', () => {
+        svg.transition().call(zoom.scaleBy, 0.75);
+    });
+
+    resetButton.addEventListener('click', () => {
+        svg.transition().call(zoom.transform, d3.zoomIdentity);
+    });
+</script>
+
+</body>
+</html>
